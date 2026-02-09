@@ -1,0 +1,627 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "### Add Your Base Resume (HTML)\n\n1. Open the **\"Resume in HTML\"** node\n2. Replace the `resume` field value with your base resume in **HTML format**",
+        "width": 304
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1120,
+        672
+      ],
+      "typeVersion": 1,
+      "id": "6e0cb970-bdcc-4a24-9b6c-6b9d2c31f92a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "o4-mini",
+          "mode": "list",
+          "cachedResultName": "o4-mini"
+        },
+        "responsesApiEnabled": false,
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1664,
+        1152
+      ],
+      "id": "e9562330-3675-457e-9975-b4485df341ca",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "CyxuI7tris1F4aoS",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"resume_html\": \"string\",\n  \"ats_score\": \"string\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1808,
+        1152
+      ],
+      "id": "26e3f7e2-272c-4107-b58b-427978e34a00",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "o4-mini",
+          "mode": "list",
+          "cachedResultName": "o4-mini"
+        },
+        "responsesApiEnabled": false,
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        1152
+      ],
+      "id": "705c8398-8c4c-4643-8ce2-a2c4383a31cc",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "PRfNY6s2x48pBEqa",
+          "name": "Nebius account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"jobTitle\": \"string\",\n  \"companyName\": \"string\",\n  \"jobDescription\": \"string\"\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        976,
+        1152
+      ],
+      "id": "8a4fb0ba-6738-4ed9-9eae-f592a9e01f1f",
+      "name": "JD Output Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Optimize the following resume.\n\nBASE RESUME HTML:\n{{ $json.base_resume }}\n\nTARGET JOB TITLE:\n{{ $json.output.jobTitle }}\n\nTARGET JOB COMPANY:\n{{ $json.output.companyName }}\n\nTARGET JOB DESCRIPTION:\n{{ $json.output.jobDescription }}\n\nINSTRUCTIONS:\n1. Re-word the professional summary and bullet points to hit an 85%+ match for the JD.\n2. Return the full updated HTML in the 'resume_html' field.\n3. Calculate the match score and return it in the 'ats_score' field.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a precise JSON API for ATS resume optimization. You do not converse. You only output structured data.\n\n### STRICT OPERATIONAL RULES:\n1. OUTPUT FORMAT: You must return ONLY a valid JSON object. Do not include markdown formatting, backticks, or introductory text.\n2. SCHEMA: Your output must strictly contain only two keys:\n   - \"resume_html\": (String) The full, optimized HTML resume content.\n   - \"ats_score\": (String) The numeric match score (e.g., \"92%\").\n3. HTML PRESERVATION: You must keep the exact <html>, <head>, <style>, and <body> structure provided in the input. Do not alter CSS classes, IDs, or layout logic.\n4. CONTENT OPTIMIZATION: Rewrite only the text inside the HTML tags to align with the provided Job Description keywords and requirements to reach an 85%+ match.\n5. NO HALLUCINATION: Do not add experience or certifications that do not exist in the base resume. Only rephrase existing data."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1664,
+        960
+      ],
+      "id": "ddc46dac-e375-408f-b29e-6b51a382b5c8",
+      "name": "ATS Resume Optimization",
+      "retryOnFail": true,
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Target Content to Extract:\n{{ $json.data }}\n\nTask: \nMap the content above into the following structure:\n1. \"jobTitle\": The official title of the position.\n2. \"companyName\": The name of the hiring organization.\n3. \"jobDescription\": A comprehensive summary of the role, duties, and requirements.\n\nReturn strictly JSON.",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are a Job Description Extraction Agent.\n\nYour task is to extract only the essential job information needed\nfor ATS resume optimization from raw HTML.\n\nRules:\n- Focus ONLY on job-related content\n- Ignore navigation, headers, footers, ads, cookie banners, and legal text\n- Do NOT hallucinate or invent information\n- If a field is not clearly present, return an empty string\n- Clean and normalize the job description text\n- Output must strictly match the structured format\n- Do not include explanations or extra text\n"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        832,
+        976
+      ],
+      "id": "d406969b-82aa-4d9b-837d-3f25997b035f",
+      "name": "JD Extractor",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e2e9fc64-f905-42ed-96d3-c1637b0f9298",
+              "name": "base_resume",
+              "value": "<!doctype html> <html lang=\"en\">   <head>     <meta charset=\"UTF-8\" />     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />     <title>Sindhura Ramananda - Resume</title>     <style>       * {         margin: 0;         padding: 0;         box-sizing: border-box;       }        @page {         size: 8.5in 11in;         margin: 0.5in 0.5in 0.5in 0.5in;       }        @page WordSection1 {         size: 8.5in 11in;         margin: 0.5in 0.5in 0.5in 0.5in;       }        body {         font-family: \"Calibri\", \"Arial\", sans-serif;         font-size: 12pt;         line-height: 1.4;         color: #000;         background-color: #fff;         margin: 0;         padding: 0;       }        .header {         text-align: left;         margin-bottom: 15px;         padding-bottom: 8px;       }        .header h1 {         font-size: 18pt;         font-weight: bold;         margin-bottom: 2px;         text-transform: uppercase;         letter-spacing: 0.5px;       }        .header .title {         font-size: 14pt;         font-weight: bold;         margin-bottom: 4px;       }        .header .contact {         font-size: 10pt;         margin-bottom: 0;       }        .header .contact a {         color: #0563c1;         text-decoration: none;       }        .header .contact a:hover {         text-decoration: underline;       }        .section {         margin-bottom: 18px;       }        .section-title {         font-size: 12pt;         font-weight: bold;         text-transform: uppercase;         margin-bottom: 8px;         padding-bottom: 2px;       }        .section ul {         margin-top: 6px;       }        .section li {         margin-bottom: 4px;         line-height: 1.35;         padding-left: 8px;       }        .job-header {         margin-top: 8px;         margin-bottom: 4px;       }        .job-title {         font-weight: bold;         font-size: 12pt;       }        .job-company {         font-weight: bold;       }        .job-location {         float: right;         font-weight: normal;       }        .job-domain {         font-weight: bold;         font-style: italic;         margin-top: 2px;       }        .job-project {         font-weight: bold;         font-style: italic;         margin-top: 2px;       }        .responsibilities {         font-weight: bold;         margin-top: 6px;         margin-bottom: 4px;       }        .environment {         font-weight: bold;         margin-top: 8px;       }        .environment-text {         font-weight: normal;       }        strong,       b {         font-weight: bold;       }        .certification-link {         color: #0563c1;         text-decoration: none;       }        .certification-link:hover {         text-decoration: underline;       }        .education-item {         margin-bottom: 4px;       }        @media print {         body {           max-width: 100%;           padding: 0.5in;         }       }        /* Bullet styling */       ul {         list-style-type: disc;         padding-left: 20px;         color: currentColor;       }        ul li {         padding-left: 5px;       }        .WordSection1 {         page: WordSection1;       }     </style>   </head>   <body>     <div class=\"WordSection1\">       <div class=\"header\">         <h1>SINDHURA RAMANANDA</h1>         <div class=\"title\">Full Stack Developer</div>         <div class=\"contact\">           Ph no: +1 970-795-8810 | Email:           <a href=\"mailto:sindhuramananda@gmail.com\"             >sindhuramananda@gmail.com</a           >         </div>       </div>        <div class=\"section\">         <div class=\"section-title\">PROFESSIONAL SUMMARY</div>         <ul>           <li>             Over <strong>3.5+ years</strong> of progressive experience in             <strong>Artificial Intelligence, Machine Learning,</strong> and             <strong>Full Stack Development</strong> with expertise in designing             and implementing scalable, production-grade             <strong>AI/ML solutions</strong> across             <strong>healthcare</strong> and <strong>fintech</strong> domains.           </li>           <li>             Proficient in developing advanced             <strong>ML, Deep Learning,</strong> and <strong>NLP</strong> models             using             <strong               >Python, TensorFlow, PyTorch, Scikit-learn, Hugging Face               Transformers (BERT, GPT),</strong             >             and <strong>Vision Transformers,</strong> achieving high-accuracy             outcomes in predictive analytics, fraud detection, and medical image             analysis.           </li>           <li>             Skilled in cloud platforms including             <strong>AWS SageMaker, Azure ML Studio,</strong> and             <strong>GCP Vertex AI,</strong> with strong experience in big data             frameworks such as             <strong>Apache Spark, Kafka, Hadoop, Airflow, Databricks,</strong>             and <strong>Snowflake</strong> for large-scale ETL, real-time data             processing, and analytics.           </li>           <li>             Hands-on expertise in <strong>MLOps</strong> and             <strong>DevOps</strong> pipelines leveraging             <strong>Docker, Kubernetes, Jenkins, GitLab CI/CD, MLflow,</strong>             and <strong>Terraform,</strong> enabling automated model deployment,             monitoring, drift detection, and ensuring compliance with             <strong>HIPAA</strong> and <strong>PCI-DSS</strong> standards.           </li>           <li>             Adept at <strong>full stack development</strong> using             <strong>Python Django, Flask, FastAPI, Node.js, React.js,</strong>             and <strong>REST/GraphQL APIs</strong> with secure             <strong>microservices</strong> architecture, enhancing system             reliability, scalability, and performance for enterprise-grade             platforms.           </li>           <li>             Excellent             <strong               >communication skills, problem solving, adaptability,</strong             >             and <strong>team player</strong> and passionate to learn             <strong>innovative technologies.</strong>           </li>         </ul>       </div>        <div class=\"section\">         <div class=\"section-title\">TECHNICAL SKILLS</div>         <ul>           <li>             <strong>Programming Languages:</strong> Python, R, Java, JavaScript,             SQL, Scala, C++, Go, TypeScript, HTML5, CSS3, Bash, Shell Scripting           </li>           <li>             <strong>Machine Learning & AI:</strong> TensorFlow, PyTorch,             Scikit-learn, Keras, XGBoost, LightGBM, CatBoost, OpenCV, NLTK,             spaCy, Hugging Face, MLflow, Kubeflow, AutoML, H2O.ai           </li>           <li>             <strong>Deep Learning:</strong> CNN, RNN, LSTM, GRU, Transformer,             BERT, GPT-3/4, ResNet, EfficientNet, YOLO, GANs, Autoencoders,             Attention Mechanisms, Vision Transformers           </li>           <li>             <strong>Cloud Platforms:</strong> AWS (SageMaker, EC2, S3, Lambda,             EMR, Glue, RDS), Microsoft Azure (ML Studio, Databricks, Synapse,             Cognitive Services), Google Cloud (AI Platform, BigQuery, Vertex AI,             AutoML)           </li>           <li>             <strong>Big Data & Analytics:</strong> Apache Spark, Hadoop, Kafka,             Airflow, Databricks, Snowflake, Apache Beam, Elasticsearch, Tableau,             Power BI, Looker, Apache Flink           </li>           <li>             <strong>Databases:</strong> PostgreSQL, MongoDB, MySQL, Redis,             Cassandra, DynamoDB, Neo4j, InfluxDB, Oracle, SQLite, Snowflake,             BigQuery, Apache HBase           </li>           <li>             <strong>Web Technologies:</strong> React.js, Node.js, Django, Flask,             FastAPI, Express.js, Angular, Vue.js, Bootstrap, Material-UI, REST             API, GraphQL, Swagger, JWT           </li>           <li>             <strong>DevOps & MLOps:</strong> Docker, Kubernetes, Jenkins, GitLab             CI/CD, GitHub Actions, Terraform, Ansible, Prometheus, Grafana,             Apache Airflow, MLflow, DVC, Seldon Core           </li>           <li>             <strong>Operating Systems:</strong> Linux (Ubuntu, CentOS, RHEL,             Amazon Linux), Windows Server, macOS, Unix, Docker Containers,             Virtual Machines           </li>         </ul>       </div>        <div class=\"section\">         <div class=\"section-title\">PROFESSIONAL WORK EXPERIENCE</div>          <div class=\"job-header\">           <div class=\"job-title\">             <span class=\"job-company\"               >Optum| Full Stack AI Engineer | Denver, CO</span             >             <span class=\"job-location\">Feb 2024 - Present</span>           </div>         </div>         <div class=\"job-domain\">           Domain: Healthcare Technology & Value-Based Care Analytics         </div>         <div class=\"job-project\">           Project: AI-Powered Population Health Management & Clinical Decision           Support System         </div>         <div class=\"responsibilities\">Responsibilities:</div>         <ul>           <li>             Developed and deployed full stack             <strong>AI-driven healthcare applications</strong> by integrating             deep learning and NLP models (<strong               >BERT, GPT, Vision Transformers</strong             >) into <strong>FastAPI-</strong> and             <strong>Flask-based microservices</strong> with             <strong>React.js</strong> frontends, improving diagnostic throughput             by <strong>40%</strong> and enabling real-time clinical decision             support for <strong>25K+ active users.</strong>           </li>           <li>             Built scalable <strong>REST</strong> and             <strong>GraphQL APIs</strong> to serve predictive models and data             insights with <strong><100 ms latency,</strong> enabling seamless             integration with clinical systems and achieving             <strong>99.9%</strong> service uptime across distributed deployments             in <strong>AWS</strong> and <strong>Azure.</strong>           </li>           <li>             Engineered modular <strong>React.js dashboards</strong> and             <strong>visualization layers</strong> using             <strong>D3.js</strong> and <strong>Plotly</strong> for real-time             population health tracking, patient risk stratification, and             AI-driven care recommendations, enhancing care team coordination             efficiency by <strong>43%.</strong>           </li>           <li>             Designed <strong>cloud-native backend systems</strong> leveraging             <strong>Python, Node.js,</strong> and <strong>FastAPI</strong> with             containerized services (<strong>Docker/Kubernetes</strong>)             orchestrated via <strong>CI/CD pipelines</strong> in             <strong>Azure DevOps,</strong> reducing deployment cycles by             <strong>85%.</strong>           </li>           <li>             Architected robust <strong>ETL</strong> and             <strong>data pipelines</strong> using             <strong>Apache Spark, Airflow,</strong> and             <strong>Snowflake</strong> to process <strong>8 TB+</strong> of             healthcare claims and EHR data daily, powering AI inference APIs and             data analytics services in production.           </li>           <li>             Designed high-performance <strong>REST APIs</strong> using             <strong>FastAPI</strong> and <strong>Flask</strong> for serving             predictive models, handling             <strong>25,000+ concurrent requests</strong> from healthcare             providers with <strong>sub-100ms latency</strong> and             <strong>99.9% uptime.</strong>           </li>           <li>             Implemented intelligent <strong>caching</strong> and             <strong>load balancing</strong> strategies using             <strong>Redis clusters</strong> and             <strong>Nginx,</strong> improving API response times by             <strong>58%</strong> and supporting <strong>25K+</strong> concurrent             provider requests across multiple regions.           </li>           <li>             Integrated real-time <strong>model monitoring</strong> and             <strong>drift detection</strong> with <strong>MLflow</strong> and             <strong>Evidently AI,</strong> building automated alerting services             in React dashboards for proactive retraining and model governance.           </li>           <li>             Deployed secure <strong>authentication</strong> and             <strong>role-based access control (RBAC)</strong> for             clinician-facing web applications using <strong>OAuth2</strong> and             <strong>JWT,</strong> ensuring compliance with             <strong>HIPAA</strong> and <strong>SOC 2</strong> standards.           </li>           <li>             Implemented automated <strong>model monitoring</strong> and             <strong>drift detection systems</strong> using             <strong>Evidently AI</strong> and custom alerting, ensuring             <strong>99.8%</strong> model reliability in production and proactive             model retraining.           </li>           <li>             Conducted advanced <strong>statistical analysis</strong> and             <strong>A/B testing</strong> for clinical research initiatives,             supporting evidence-based healthcare decisions and contributing to             <strong>2 peer-reviewed publications.</strong>           </li>           <li>             Led <strong>cross-functional collaboration</strong> between data             scientists, backend developers, and clinicians to transform research             prototypes into scalable, production-grade AI web applications that             directly improved patient outcomes.           </li>         </ul>         <div class=\"environment\">           Environment:           <span class=\"environment-text\"             >Python, Node.js, TensorFlow, PyTorch, React.js, FastAPI, Flask,             Azure ML, AWS SageMaker, Docker, Kubernetes, Snowflake, PostgreSQL,             Redis, MLflow, Airflow, D3.js, Plotly, Azure DevOps</span           >         </div>          <div class=\"job-header\" style=\"margin-top: 18px\">           <div class=\"job-title\">             <span class=\"job-company\"               >Paytm | Python Full Stack Developer | India</span             >             <span class=\"job-location\">July 2020 - July 2022</span>           </div>         </div>         <div class=\"job-domain\">           Domain: Digital Payments & Financial Technology         </div>         <div class=\"job-project\">           Project: Unified Payment Interface (UPI) Platform for Digital           Transactions         </div>         <div class=\"responsibilities\">Responsibilities:</div>         <ul>           <li>             Developed robust <strong>payment processing systems</strong> using             <strong>Python Django</strong> and             <strong>Node.js,</strong> handling <strong>2 million+</strong> daily             transactions and improving payment success rates by             <strong>34%.</strong>           </li>           <li>             Built <strong>machine learning models</strong> using             <strong>Scikit-learn</strong> and <strong>XGBoost</strong> for fraud             detection and risk assessment, reducing fraudulent transactions by             <strong>41%</strong> and saving <strong>$2M annually.</strong>           </li>           <li>             Implemented secure <strong>RESTful APIs</strong> and             <strong>microservices</strong> using <strong>Flask</strong> and             <strong>Express.js,</strong> ensuring             <strong>99.9% uptime</strong> for critical payment gateway services.           </li>           <li>             Designed scalable <strong>database architectures</strong> using             <strong>MongoDB</strong> and <strong>MySQL,</strong> optimizing             transaction processing speeds and reducing database latency by             <strong>47%.</strong>           </li>           <li>             Created <strong>real-time data streaming pipelines</strong> using             <strong>Apache Kafka</strong> and <strong>Redis,</strong> processing             payment events and generating instant transaction notifications.           </li>           <li>             Developed <strong>responsive web applications</strong> using             <strong>React.js</strong> and <strong>JavaScript,</strong> enhancing             user experience and increasing mobile payment adoption by             <strong>28%.</strong>           </li>           <li>             Implemented comprehensive             <strong>automated testing suites</strong> using             <strong>PyTest</strong> and <strong>Selenium,</strong> achieving             <strong>92% code coverage</strong> and reducing production defects             by             <strong>45%.</strong>           </li>           <li>             Integrated multiple <strong>payment gateways</strong> and             <strong>banking APIs,</strong> ensuring             <strong>PCI-DSS compliance</strong> and seamless transaction             processing across various financial institutions.           </li>           <li>             Built <strong>analytics dashboards</strong> using             <strong>Chart.js</strong> and <strong>Bootstrap,</strong> providing             real-time business intelligence insights and reducing manual             reporting efforts by <strong>55%.</strong>           </li>           <li>             Optimized application performance using             <strong>caching mechanisms</strong> with <strong>Redis</strong> and             <strong>CDN integration,</strong> improving             <strong>page load speeds</strong> by <strong>52%</strong> for mobile             users.           </li>           <li>             Collaborated with product teams in <strong>agile sprints</strong> to             deliver customer-centric features, resulting in             <strong>30% improvement</strong> in user engagement metrics.           </li>           <li>             Maintained <strong>high-availability systems</strong> using             monitoring tools like <strong>Prometheus</strong> and             <strong>Grafana,</strong> ensuring             <strong>99.8% service availability</strong> during peak transaction             periods.           </li>         </ul>         <div class=\"environment\">           Environment:           <span class=\"environment-text\"             >Python, Django, Flask, React.js, Node.js, MongoDB, MySQL, Redis,             Scikit-learn, XGBoost, Apache Kafka, JavaScript, HTML5, CSS3,             Git</span           >         </div>       </div>        <div class=\"section\">         <div class=\"section-title\">EDUCATION</div>         <ul>           <li class=\"education-item\">             <strong>Master of Science (M.S.) in Computer Science</strong> from             California State University, Sacramento, CA, USA.           </li>           <li class=\"education-item\">             <strong               >Bachelor of Engineering (B.E.) in Computer Science and               Engineering</strong             >             from Visvesvaraya Technological University, Belagavi, India.           </li>         </ul>       </div>        <div class=\"section\">         <div class=\"section-title\">Certifications</div>         <ul>           <li>             AWS Solutions Architect – Associate -             <a               href=\"https://www.credly.com/badges/e2273b4e-76cc-4b26-a92e-a3cbe3f16343/public_url\"               class=\"certification-link\"               target=\"_blank\"               >Link</a             >           </li>           <li>             Oracle Cloud Infrastructure 2025 Certified AI Foundations Associate           </li>           <li>             Google Prompting Essentials -             <a               href=\"https://coursera.org/share/1302b1f097e8511dcf104b0aec4485b7\"               class=\"certification-link\"               target=\"_blank\"               >Link</a             >           </li>         </ul>       </div>     </div>   </body> </html>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1232,
+        848
+      ],
+      "id": "39f0da5a-ebcb-4845-861b-305241caa10b",
+      "name": "Resume in HTML"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        48,
+        976
+      ],
+      "id": "7bf674b0-8ea6-42e5-94ed-26173c063d72",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "=https://app.scrapingbee.com/api/v1/?api_key=WYE04KL4GX7CDBC96J1BHC7O9IKBOP9WD1O3J2WDR8CXOL72M08G2E8CGDFEK5TDFMIJXKJ2YE9ECGKQ&url={{ $json.Links }}&render_js=true&wait=5000\n",
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "id": "3db4b0e0-502b-416c-b643-46a0d2270c48",
+      "name": "Scrape Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        432,
+        976
+      ],
+      "retryOnFail": true,
+      "maxTries": 5
+    },
+    {
+      "parameters": {
+        "mode": "combineBySql",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1472,
+        960
+      ],
+      "id": "d40de6f1-10ab-4cfb-b35d-6be3d4ae797d",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1a2auhn1XVEQRnsYmIVHkCQE70TYGktwB5RQq3EVkJiI",
+          "mode": "list",
+          "cachedResultName": "n8n-test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a2auhn1XVEQRnsYmIVHkCQE70TYGktwB5RQq3EVkJiI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1389250377,
+          "mode": "list",
+          "cachedResultName": "Job-Links",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a2auhn1XVEQRnsYmIVHkCQE70TYGktwB5RQq3EVkJiI/edit#gid=1389250377"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $('Get Links').first().json.row_number }}",
+            "Created": "Yes",
+            "ATS Score": "={{ $('ATS Resume Optimization').item.json.output.ats_score }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Links",
+              "displayName": "Links",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ATS Score",
+              "displayName": "ATS Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2592,
+        960
+      ],
+      "id": "6713d4fe-3f87-48f9-9fc9-b60b61d91f74",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SN0CaIMPHtwNVeqY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1a2auhn1XVEQRnsYmIVHkCQE70TYGktwB5RQq3EVkJiI",
+          "mode": "list",
+          "cachedResultName": "n8n-test",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a2auhn1XVEQRnsYmIVHkCQE70TYGktwB5RQq3EVkJiI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1389250377,
+          "mode": "list",
+          "cachedResultName": "Job-Links",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1a2auhn1XVEQRnsYmIVHkCQE70TYGktwB5RQq3EVkJiI/edit#gid=1389250377"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Created",
+              "lookupValue": "No"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        240,
+        976
+      ],
+      "id": "1a9f907b-94f5-432c-aef5-d14dfae711d5",
+      "name": "Get Links",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SN0CaIMPHtwNVeqY",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1ttG3_GC253HMZA_jD3mEWMaus3AeVsxB",
+          "mode": "list",
+          "cachedResultName": "n8n-test",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1ttG3_GC253HMZA_jD3mEWMaus3AeVsxB"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2384,
+        960
+      ],
+      "id": "b3dfa8fc-57be-458e-9a03-56f01ef95776",
+      "name": "Upload DOCX",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "3oGQlsCWrtkvjf1a",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.Files[0].Url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2192,
+        960
+      ],
+      "id": "02f8e046-8015-4fba-8dd8-3b8bd60485f2",
+      "name": "Get Resume"
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "httpVariantWarning": "",
+        "method": "POST",
+        "url": "https://v2.convertapi.com/html/to/docx",
+        "": "",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "convertApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": false,
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n    \"Parameters\": [\n        {\n            \"Name\": \"File\",\n            \"FileValue\": {\n                \"Name\": \"{{ $('Merge').first().json.output.jobTitle.replaceAll(' ', '_') }}_{{ $('Merge').first().json.output.companyName.replaceAll(' ', '_') }}.html\",\n                \"Data\": \"{{ $json.output.resume_html.base64Encode() }}\"\n            }\n        },\n        {\n            \"Name\": \"StoreFile\",\n            \"Value\": true\n        },\n        {\n            \"Name\": \"Alternative\",\n            \"Value\": true\n        }\n    ]\n}",
+        "options": {},
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1984,
+        960
+      ],
+      "id": "94a51b9d-8613-4443-964f-2f13d97be8fd",
+      "name": "Convert HTML to DOCX",
+      "extendsCredential": "convertApi",
+      "credentials": {
+        "convertApi": {
+          "id": "WYLjvBTTKpFwRoIN",
+          "name": "ConvertAPI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = items[0].json.data;\n// Remove scripts, styles, and tags\nlet cleanText = html.replace(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gmi, \"\");\ncleanText = cleanText.replace(/<style\\b[^>]*>([\\s\\S]*?)<\\/style>/gmi, \"\");\ncleanText = cleanText.replace(/<[^>]*>?/gm, \" \");\n// Condense whitespace\ncleanText = cleanText.replace(/\\s+/g, \" \").trim();\n\nreturn { data: cleanText };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        976
+      ],
+      "id": "2eed4f2a-bd9e-47e9-aa77-80003614ef28",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "connections": {
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "ATS Resume Optimization",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "ATS Resume Optimization",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "JD Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JD Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "JD Extractor",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ATS Resume Optimization": {
+      "main": [
+        [
+          {
+            "node": "Convert HTML to DOCX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JD Extractor": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Resume in HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resume in HTML": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Website": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "ATS Resume Optimization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Links": {
+      "main": [
+        [
+          {
+            "node": "Scrape Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload DOCX": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Resume": {
+      "main": [
+        [
+          {
+            "node": "Upload DOCX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert HTML to DOCX": {
+      "main": [
+        [
+          {
+            "node": "Get Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "JD Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "558d88703fb65b2d0e44613bc35916258b0f0bf983c5d4730c00c424b77ca36a"
+  }
+}
